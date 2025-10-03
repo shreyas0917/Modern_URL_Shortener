@@ -1,43 +1,35 @@
-const Counter = require('../models/Counter');
-
-// Base62 characters for URL-safe encoding
-const BASE62_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const { nanoid } = require('nanoid');
+const Url = require('../models/Url');
 
 /**
- * Convert a number to Base62 string
- * @param {number} num - The number to convert
- * @returns {string} Base62 encoded string
- */
-function toBase62(num) {
-  if (num === 0) return '0';
-  
-  let result = '';
-  while (num > 0) {
-    result = BASE62_CHARS[num % 62] + result;
-    num = Math.floor(num / 62);
-  }
-  return result;
-}
-
-/**
- * Generate a unique short ID using counter
+ * Generate a unique 7-character short ID
  * @returns {Promise<string>} Unique short ID
  */
 async function generateShortId() {
-  try {
-    const counter = await Counter.findByIdAndUpdate(
-      { _id: 'url_count' },
-      { $inc: { sequence_value: 1 } },
-      { new: true, upsert: true }
-    );
+  let shortId;
+  let isUnique = false;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while (!isUnique && attempts < maxAttempts) {
+    // Generate a 7-character alphanumeric ID
+    shortId = nanoid(7);
     
-    return toBase62(counter.sequence_value);
-  } catch (error) {
-    throw new Error('Failed to generate short ID: ' + error.message);
+    // Check if this ID already exists in the database
+    const existingUrl = await Url.findOne({ shortId });
+    if (!existingUrl) {
+      isUnique = true;
+    }
+    attempts++;
   }
+
+  if (!isUnique) {
+    throw new Error('Failed to generate unique short ID after multiple attempts');
+  }
+
+  return shortId;
 }
 
 module.exports = {
-  generateShortId,
-  toBase62
+  generateShortId
 };
