@@ -11,24 +11,63 @@ class RedisService {
    */
   async connect() {
     try {
+      // Check if Redis credentials are provided
+      if (!process.env.REDIS_HOST || !process.env.REDIS_PASSWORD) {
+        console.warn('⚠️ Redis credentials not found in environment variables. Redis will not be available.');
+        return false;
+      }
+
       this.client = createClient({
-        username: 'default',
-        password: 'Q4frZuYQAnne8BFi3L2SesF0JWUk0nZW',
+        username: process.env.REDIS_USERNAME || 'default',
+        password: process.env.REDIS_PASSWORD,
         socket: {
-          host: 'redis-14389.c305.ap-south-1-1.ec2.redns.redis-cloud.com',
-          port: 14389
+          host: process.env.REDIS_HOST,
+          port: parseInt(process.env.REDIS_PORT || '14389'),
+          connectTimeout: 5000, // 5 second timeout
+          reconnectStrategy: false // Disable auto-reconnect to prevent spam
         }
       });
 
-      this.client.on('error', err => console.log('Redis Client Error', err));
+      // Only log errors once, don't spam
+      let errorLogged = false;
+      this.client.on('error', err => {
+        if (!errorLogged) {
+          console.error('❌ Redis connection error:', err.message);
+          errorLogged = true;
+        }
+      });
 
-      await this.client.connect();
+      // Set connection timeout
+      const connectPromise = this.client.connect();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      );
+
+      await Promise.race([connectPromise, timeoutPromise]);
       console.log('✅ Redis connected successfully');
       this.isConnected = true;
       return true;
     } catch (error) {
-      console.error('❌ Failed to connect to Redis:', error.message);
+      // Only log once, don't spam
+      if (error.code === 'ENOTFOUND' || error.message.includes('timeout')) {
+        console.error('❌ Failed to connect to Redis:', error.message);
+        console.error('💡 Possible causes:');
+        console.error('   1. Redis Cloud instance is paused or deleted');
+        console.error('   2. Redis hostname is incorrect');
+        console.error('   3. Network connectivity issues');
+        console.error('   4. IP address not whitelisted in Redis Cloud');
+        console.error('⚠️  Application will continue without Redis caching');
+      } else {
+        console.error('❌ Failed to connect to Redis:', error.message);
+      }
       this.isConnected = false;
+      // Clean up failed connection
+      if (this.client) {
+        try {
+          await this.client.quit().catch(() => {});
+        } catch (e) {}
+        this.client = null;
+      }
       return false;
     }
   }

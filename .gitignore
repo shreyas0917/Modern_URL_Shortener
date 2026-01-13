@@ -11,6 +11,11 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Backend specific .env files
+backend/.env
+backend/.env.local
+backend/.env.production
+
 # Build outputs
 dist/
 build/
@@ -18,6 +23,8 @@ build/
 # Logs
 logs/
 *.log
+backend/logs/
+frontend/logs/
 
 # Runtime data
 pids/

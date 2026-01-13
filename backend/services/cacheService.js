@@ -1,14 +1,6 @@
 const Url = require('../models/Url');
 const redisService = require('./redisService');
 
-// Set Redis Cloud environment variables if not already set
-if (!process.env.REDIS_HOST) {
-  process.env.REDIS_HOST = 'redis-14389.c305.ap-south-1-1.ec2.redns.redis-cloud.com';
-  process.env.REDIS_PORT = '14389';
-  process.env.REDIS_PASSWORD = 'Q4frZuYQAnne8BFi3L2SesF0JWUk0nZW';
-  process.env.REDIS_USERNAME = 'default';
-}
-
 class CacheService {
   constructor() {
     this.CACHE_TTL = 3600; // 1 hour

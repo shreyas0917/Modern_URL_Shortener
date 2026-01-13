@@ -25,7 +25,6 @@ A modern, full-stack URL shortener with Redis caching, MongoDB storage, and a be
 - React Router for navigation
 - Axios for API calls
 
-## 🚀 Quick Start
 
 ### 1. Clone & Install
 ```bash
@@ -54,7 +53,6 @@ npm run dev
 ./start-servers.ps1
 ```
 
-## ⚙️ Environment Setup
 
 Create `backend/.env`:
 ```env
@@ -155,21 +153,5 @@ URL_Shortner_Project/
 - **Health Check**: http://localhost:5000/health
 - **Cache Stats**: http://localhost:5000/cache/stats
 
-## 🛠️ Development
-
-```bash
-# Start both servers
-./start-servers.ps1
-
-# Or start individually
-cd backend && npm start
-cd frontend && npm run dev
-```
-
-## 📝 License
-
-MIT License - Feel free to use this project for your own purposes.
-
----
 
 **Built with ❤️ using Node.js, React, MongoDB, and Redis**
