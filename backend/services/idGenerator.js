@@ -1,5 +1,14 @@
-const { nanoid } = require('nanoid');
-const Url = require('../models/Url');
+const Url = require("../models/Url");
+
+let nanoidFn; // cached after first load
+
+async function nanoid(length = 7) {
+  if (!nanoidFn) {
+    const mod = await import("nanoid"); // ✅ works in CommonJS on Vercel
+    nanoidFn = mod.nanoid;
+  }
+  return nanoidFn(length);
+}
 
 /**
  * Generate a unique 7-character short ID
@@ -7,29 +16,19 @@ const Url = require('../models/Url');
  */
 async function generateShortId() {
   let shortId;
-  let isUnique = false;
   let attempts = 0;
   const maxAttempts = 10;
 
-  while (!isUnique && attempts < maxAttempts) {
-    // Generate a 7-character alphanumeric ID
-    shortId = nanoid(7);
-    
-    // Check if this ID already exists in the database
+  while (attempts < maxAttempts) {
+    shortId = await nanoid(7); // ✅ changed here
+
     const existingUrl = await Url.findOne({ shortId });
-    if (!existingUrl) {
-      isUnique = true;
-    }
+    if (!existingUrl) return shortId;
+
     attempts++;
   }
 
-  if (!isUnique) {
-    throw new Error('Failed to generate unique short ID after multiple attempts');
-  }
-
-  return shortId;
+  throw new Error("Failed to generate unique short ID after multiple attempts");
 }
 
-module.exports = {
-  generateShortId
-};
+module.exports = { generateShortId };
