@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, Copy, Loader } from 'lucide-react'
+import { Link, Copy } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { shortenUrl } from '../services/api'
 
@@ -10,26 +10,26 @@ const InputBox = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!url.trim()) {
       toast.error('Please enter a URL')
       return
     }
 
     setLoading(true)
-    
+
     try {
       const response = await shortenUrl(url)
-      
-      if (response.success) {
+
+      if (response?.success) {
         setResult(response.data)
         toast.success('URL shortened successfully!')
       } else {
-        toast.error(response.message || 'Failed to shorten URL')
+        toast.error(response?.message || 'Failed to shorten URL')
       }
     } catch (error) {
       console.error('Error shortening URL:', error)
-      toast.error('An error occurred while shortening the URL')
+      toast.error(error?.message || 'Failed to shorten URL')
     } finally {
       setLoading(false)
     }
@@ -53,9 +53,7 @@ const InputBox = () => {
   return (
     <div className="card">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-white mb-4">
-          Shorten Your URL
-        </h2>
+        <h2 className="text-2xl font-bold text-white mb-4">Shorten Your URL</h2>
         <p className="text-gray-300">
           Enter your long URL below and get a short, shareable link instantly
         </p>
@@ -75,11 +73,7 @@ const InputBox = () => {
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn btn-primary w-full"
-        >
+        <button type="submit" disabled={loading} className="btn btn-primary w-full">
           {loading ? (
             <>
               <div className="spinner"></div>
@@ -103,7 +97,9 @@ const InputBox = () => {
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-300 mb-2 block">Short URL:</label>
+              <label className="text-sm font-medium text-gray-300 mb-2 block">
+                Short URL:
+              </label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -112,6 +108,7 @@ const InputBox = () => {
                   className="input flex-1 bg-gray-700 border-gray-500 text-white font-mono"
                 />
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(result.shortUrl)}
                   className="btn btn-secondary"
                   title="Copy to clipboard"
@@ -132,23 +129,23 @@ const InputBox = () => {
               </div>
               <div className="bg-gray-700 p-4 rounded-lg">
                 <p className="text-sm text-gray-400 mb-1">Created</p>
-                <p className="text-white text-sm">{new Date(result.createdAt).toLocaleDateString()}</p>
+                <p className="text-white text-sm">
+                  {new Date(result.createdAt).toLocaleDateString()}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="flex gap-4 mt-6">
             <button
+              type="button"
               onClick={() => copyToClipboard(result.shortUrl)}
               className="btn btn-success flex-1"
             >
               <Copy className="w-4 h-4" />
               Copy URL
             </button>
-            <button
-              onClick={resetForm}
-              className="btn btn-secondary flex-1"
-            >
+            <button type="button" onClick={resetForm} className="btn btn-secondary flex-1">
               Shorten Another
             </button>
           </div>
