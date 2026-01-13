@@ -18,6 +18,63 @@ const PORT = process.env.PORT || 5000;
 
 /**
  * ---------------------------
+ * DB + Redis init (MUST be before routes)
+ * ---------------------------
+ */
+mongoose.set("bufferCommands", false);
+
+let isInitialized = false;
+let initPromise = null;
+
+async function initServices() {
+  if (isInitialized) return;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    // Mongo
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 30000, // ✅ more tolerant on serverless
+      socketTimeoutMS: 45000,
+    });
+
+    console.log("Connected to MongoDB");
+
+    // Redis
+    try {
+      const redisConnected = await redisService.connect();
+      console.log(
+        redisConnected
+          ? "🚀 Redis caching enabled"
+          : "⚠️ Redis not available, using database only"
+      );
+    } catch (e) {
+      console.error("Redis init failed (continuing without redis):", e.message);
+    }
+
+    isInitialized = true;
+  })();
+
+  return initPromise;
+}
+
+// ✅ Ensure DB/Redis initialized before any request hits routes
+app.use(async (req, res, next) => {
+  try {
+    await initServices();
+    next();
+  } catch (e) {
+    console.error("Database init failed:", e);
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+    });
+  }
+});
+
+/**
+ * ---------------------------
  * Middlewares
  * ---------------------------
  */
@@ -50,6 +107,11 @@ app.get("/health", (req, res) => {
     message: "Server is running",
     timestamp: new Date().toISOString(),
   });
+});
+
+// ✅ Debug endpoint to confirm Mongo is connected (1 = connected)
+app.get("/db-test", (req, res) => {
+  res.json({ success: true, readyState: mongoose.connection.readyState });
 });
 
 app.get("/cache/stats", async (req, res) => {
@@ -97,6 +159,7 @@ app.get("/", (req, res) => {
   });
 });
 
+// Handle redirects for short URLs
 app.get("/:shortId", async (req, res) => {
   try {
     const { shortId } = req.params;
@@ -157,47 +220,9 @@ app.use((err, req, res, next) => {
 
 /**
  * ---------------------------
- * DB + Redis init (Vercel-safe)
+ * Local start only
  * ---------------------------
  */
-let isInitialized = false;
-
-async function initServices() {
-  if (isInitialized) return;
-
-  // Mongo
-  await mongoose.connect(
-    process.env.MONGODB_URI || "mongodb://localhost:27017/urlshortener",
-    {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    }
-  );
-
-  console.log("Connected to MongoDB");
-
-  // Redis
-  const redisConnected = await redisService.connect();
-  if (redisConnected) console.log("🚀 Redis caching enabled");
-  else console.log("⚠️ Redis not available, using database only");
-
-  isInitialized = true;
-}
-
-// ✅ On Vercel: init on first request
-app.use(async (req, res, next) => {
-  try {
-    await initServices();
-    next();
-  } catch (e) {
-    console.error("Startup init failed:", e);
-    res.status(500).json({ success: false, message: "Startup init failed" });
-  }
-});
-
-// ✅ Only start server locally
 if (require.main === module) {
   initServices()
     .then(() => {
